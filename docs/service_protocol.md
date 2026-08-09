@@ -63,6 +63,7 @@ inter-byte silence, so it cannot consume the next valid frame.
 | GET_PITCH | `10` | Empty |
 | GET_ROLL | `11` | Empty |
 | GET_ANGLE | `12` | Empty |
+| GET_IMU_LIVE | `13` | Empty |
 | WAKE | `7F` | Device-generated wake acknowledgement |
 
 Angle response data after the status byte:
@@ -74,6 +75,16 @@ Angle response data after the status byte:
 The signed values are little-endian and use 0.01 degree units. For example,
 `235` means `+2.35 degrees`, and `-152` means `-1.52 degrees`. A sensor read
 failure returns status `06` with no angle data.
+
+GET_IMU_LIVE response data after the status byte:
+
+`acc_x_mg:i16, acc_y_mg:i16, acc_z_mg:i16, gyro_x_dps:i16,`
+`gyro_y_dps:i16, gyro_z_dps:i16, pitch_cdeg:i16, roll_cdeg:i16`
+
+This command switches the sensor to its 104 Hz active mode on first use and
+returns one coherent sample without the eight-sample delay used by GET_ANGLE.
+It is intended for the V1.1 desktop live view. Stop1 entry restores the 52 Hz
+low-power wake configuration and re-arms WU/6D on INT1.
 
 GET_DEVICE_ID response data after the status byte:
 

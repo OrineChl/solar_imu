@@ -109,6 +109,7 @@
 | GET_PITCH | 10 | 90 | 空 | 03 |
 | GET_ROLL | 11 | 91 | 空 | 03 |
 | GET_ANGLE | 12 | 92 | 空 | 05 |
+| GET_IMU_LIVE | 13 | 93 | 空 | 11 |
 | WAKE/READY | 7F | FF | 由设备生成 | 01 |
 
 Length按帧中的十六进制显示，响应Length包含状态字节。READ_QUEUE表中长度是读取成功时的37，即十进制55字节。
@@ -505,7 +506,21 @@ pitch = atan2(ax, sqrt(ay² + az²))
 roll  = atan2(ay, sqrt(ax² + az²))
 ~~~
 
-### 5.15 WAKE/READY（7F/FF）
+### 5.15 GET_IMU_LIVE（13）
+
+作用：供 V1.1 上位机实时页面单次读取加速度、角速度、Pitch 和 Roll。首次读取会把 IMU 切换到 104 Hz 主动模式，不再执行 GET_ANGLE 的 8 次、20 ms 间隔平均，因此推荐的上位机最短刷新周期为 0.1 秒。
+
+正常响应中，状态字节之后固定为 16 字节小端有符号数据：
+
+~~~text
+acc_x_mg:i16 + acc_y_mg:i16 + acc_z_mg:i16
+gyro_x_dps:i16 + gyro_y_dps:i16 + gyro_z_dps:i16
+pitch_cdeg:i16 + roll_cdeg:i16
+~~~
+
+设备进入 Stop1 前会恢复 52 Hz 低功耗模式并重新布防 INT1 上的 Wake-Up 和 6D。
+
+### 5.16 WAKE/READY（7F/FF）
 
 上位机不发送7F完整帧，只发送单字节00：
 

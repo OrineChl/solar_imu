@@ -34,6 +34,7 @@ typedef enum {
     SERVICE_CMD_GET_PITCH    = 0x10, /**< 读取传感器坐标系的Pitch。 */
     SERVICE_CMD_GET_ROLL     = 0x11, /**< 读取传感器坐标系的Roll。 */
     SERVICE_CMD_GET_ANGLE    = 0x12, /**< 同时读取传感器坐标系的Pitch和Roll。 */
+    SERVICE_CMD_GET_IMU_LIVE = 0x13, /**< 单次读取加速度、角速度、Pitch和Roll。 */
     SERVICE_CMD_WAKE         = 0x7F  /**< 设备生成的USART2 READY通知。 */
 } ServiceCommand_t;
 

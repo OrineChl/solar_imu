@@ -242,6 +242,28 @@ void Handle_Service_Frame(const ServiceFrame_t *frame)
     }
     break;
   }
+  case SERVICE_CMD_GET_IMU_LIVE: {
+    int16_t acc_mg[3];
+    int16_t gyro_dps[3];
+    int16_t pitch_cdeg;
+    int16_t roll_cdeg;
+
+    if (frame->length != 0U) {
+      status = SERVICE_STATUS_BAD_LENGTH;
+    } else if (!LSM6DS_Read_Live(acc_mg, gyro_dps,
+                                 &pitch_cdeg, &roll_cdeg)) {
+      status = SERVICE_STATUS_FAILED;
+    } else {
+      for (uint8_t i = 0U; i < 3U; i++) {
+        Write_LE16(&response[i * 2U], (uint16_t)acc_mg[i]);
+        Write_LE16(&response[6U + i * 2U], (uint16_t)gyro_dps[i]);
+      }
+      Write_LE16(&response[12], (uint16_t)pitch_cdeg);
+      Write_LE16(&response[14], (uint16_t)roll_cdeg);
+      response_len = 16U;
+    }
+    break;
+  }
   default:
     status = SERVICE_STATUS_BAD_COMMAND;
     break;
@@ -303,7 +325,8 @@ void Service_Task(uint8_t busy_only)
         frame.command != SERVICE_CMD_GET_DEVICE_ID &&
         frame.command != SERVICE_CMD_GET_PITCH &&
         frame.command != SERVICE_CMD_GET_ROLL &&
-        frame.command != SERVICE_CMD_GET_ANGLE) {
+        frame.command != SERVICE_CMD_GET_ANGLE &&
+        frame.command != SERVICE_CMD_GET_IMU_LIVE) {
       ServiceProtocol_SendResponse(frame.command, frame.sequence,
                                    SERVICE_STATUS_BUSY, NULL, 0U);
     } else {

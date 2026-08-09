@@ -1,7 +1,11 @@
 build/
 pc_tool/.venv/
+pc_tool/venv313/
+pc_tool/.recovered_v101/
 pc_tool/build/
 pc_tool/dist/
+pc_tool/release_build/
+pc_tool/release_dist/
 pc_tool/.pytest_cache/
 pc_tool/.artifacts/
 pc_tool/**/__pycache__/
@@ -12,4 +16,5 @@ __pycache__/
 *.py[cod]
 *.log
 *.spec
+!pc_tool/SolarIMU_Tool.spec
 .claude/

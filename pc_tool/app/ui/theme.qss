@@ -1,0 +1,31 @@
+QMainWindow, QWidget { background: #f4f7fb; color: #18263a; font-family: "Microsoft YaHei UI"; font-size: 14px; }
+QFrame#sidebar { background: #12243b; color: #eaf4ff; }
+QFrame#sidebar QLabel { background: transparent; color: #d9e8f7; }
+QLabel#brandTitle { color: #5fd3ff; font-size: 26px; font-weight: 700; letter-spacing: 2px; }
+QLabel#brandSubtitle { color: #9cb2ca; font-size: 12px; }
+QFrame#sidebar QLabel#connectionOn { color: #3ddc97; font-size: 16px; }
+QFrame#sidebar QLabel#connectionOff { color: #ff7b7b; font-size: 16px; }
+QListWidget#navigation { background: transparent; border: none; color: #cbd9e8; outline: none; }
+QListWidget#navigation::item { padding: 13px 12px; margin: 2px 0; border-radius: 5px; }
+QListWidget#navigation::item:hover { background: #1c3654; }
+QListWidget#navigation::item:selected { background: #1688c8; color: white; }
+QLabel#pageTitle { font-size: 22px; font-weight: 700; color: #17375e; }
+QLabel#aboutTitle { font-size: 30px; font-weight: 700; color: #1679b8; }
+QLabel#hintLabel { color: #6c7f96; font-size: 12px; }
+QPushButton { background: #ffffff; border: 1px solid #c8d5e4; border-radius: 5px; padding: 8px 15px; }
+QPushButton:hover { border-color: #188cca; color: #0878b5; }
+QPushButton:pressed { background: #e7f4fb; }
+QPushButton:disabled { color: #9ba9b8; background: #edf1f5; }
+QPushButton#primaryButton { background: #1688c8; color: white; border: none; font-weight: 600; padding: 10px 16px; }
+QPushButton#primaryButton:hover { background: #0877b5; color: white; }
+QPushButton#dangerButton { color: #c83c3c; border-color: #efaaaa; }
+QComboBox { background: white; border: 1px solid #c8d5e4; border-radius: 4px; padding: 7px; min-height: 20px; }
+QGroupBox { background: white; border: 1px solid #d5e0eb; border-radius: 7px; margin-top: 14px; padding: 15px; font-weight: 600; }
+QGroupBox::title { subcontrol-origin: margin; left: 12px; padding: 0 5px; }
+QFrame#statusCard { background: white; border: 1px solid #d5e0eb; border-radius: 8px; }
+QLabel#cardTitle { color: #6c7f96; font-size: 12px; }
+QLabel#cardValue { color: #0878b5; font-size: 25px; font-weight: 700; }
+QLabel#cardUnit { color: #8698aa; font-size: 11px; }
+QTableWidget, QTextEdit { background: white; border: 1px solid #d5e0eb; gridline-color: #e4ebf2; selection-background-color: #bfe8fb; }
+QHeaderView::section { background: #e9f0f7; border: none; border-right: 1px solid #d5e0eb; padding: 7px; font-weight: 600; }
+QStatusBar { background: #e8eef5; color: #536b84; }

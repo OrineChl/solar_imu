@@ -112,6 +112,7 @@ void LSM6DS_Complementary_Tilt_Update(float ax, float ay, float az,
 /* 静态全局驱动实例 */
 static stmdev_ctx_t imu_ctx;                 /**< ST寄存器驱动上下文，绑定HAL I2C。 */
 static uint8_t s_sleep_mode_ready = 0U;      /**< 1表示INT1已清除旧标志并完成Stop1布防。 */
+static uint8_t s_active_mode_ready = 0U;     /**< 1表示六轴已在104Hz主动采样模式。 */
 static const uint8_t imu_addr = (0x6A << 1); /**< 7位地址0x6A转换为HAL使用的8位地址。 */
 
 /* 休眠监测时加速度计为52Hz。WAKE_UP_DUR=2要求Wake-Up滤波结果连续满足约
@@ -158,6 +159,7 @@ uint8_t LSM6DS_Init(I2C_HandleTypeDef *hi2c)
     uint8_t reset_pending = 1U;
 
     s_sleep_mode_ready = 0U;
+    s_active_mode_ready = 0U;
 
     imu_ctx.write_reg = lsm6ds3tr_c_hal_write;
     imu_ctx.read_reg  = lsm6ds3tr_c_hal_read;
@@ -282,6 +284,31 @@ static int16_t IMU_Atan2_Cdeg(int32_t y, uint32_t x)
     return (int16_t)angle;
 }
 
+/** @brief 从一帧原始加速度计算传感器坐标系Pitch/Roll。 */
+static uint8_t IMU_Angle_From_Raw(const int16_t raw_acc[3],
+                                  int16_t *pitch_cdeg,
+                                  int16_t *roll_cdeg)
+{
+    int32_t ax;
+    int32_t ay;
+    int32_t az;
+    uint32_t pitch_base;
+    uint32_t roll_base;
+
+    if (raw_acc == NULL || pitch_cdeg == NULL || roll_cdeg == NULL) return 0U;
+    ax = raw_acc[0];
+    ay = raw_acc[1];
+    az = raw_acc[2];
+    if ((ax < 0 ? -ax : ax) + (ay < 0 ? -ay : ay) +
+        (az < 0 ? -az : az) < IMU_ANGLE_MIN_ABS_SUM_RAW) return 0U;
+
+    pitch_base = IMU_Integer_Sqrt((uint32_t)(ay * ay) + (uint32_t)(az * az));
+    roll_base = IMU_Integer_Sqrt((uint32_t)(ax * ax) + (uint32_t)(az * az));
+    *pitch_cdeg = IMU_Atan2_Cdeg(ax, pitch_base);
+    *roll_cdeg = IMU_Atan2_Cdeg(ay, roll_base);
+    return 1U;
+}
+
 /** @brief 读取传感器坐标系 Pitch/Roll，不改变 IMU 配置。 */
 uint8_t IMU_Get_Angle(int16_t *pitch_cdeg, int16_t *roll_cdeg)
 {
@@ -290,8 +317,6 @@ uint8_t IMU_Get_Angle(int16_t *pitch_cdeg, int16_t *roll_cdeg)
     int32_t ax;
     int32_t ay;
     int32_t az;
-    uint32_t pitch_base;
-    uint32_t roll_base;
 
     if (pitch_cdeg == NULL || roll_cdeg == NULL) return 0U;
 
@@ -311,20 +336,10 @@ uint8_t IMU_Get_Angle(int16_t *pitch_cdeg, int16_t *roll_cdeg)
     ay = sum[1] / (int32_t)IMU_ANGLE_SAMPLE_COUNT;
     az = sum[2] / (int32_t)IMU_ANGLE_SAMPLE_COUNT;
 
-    if ((ax < 0 ? -ax : ax) +
-        (ay < 0 ? -ay : ay) +
-        (az < 0 ? -az : az) < IMU_ANGLE_MIN_ABS_SUM_RAW) {
-        return 0U;
-    }
-
-    pitch_base = IMU_Integer_Sqrt(
-        (uint32_t)(ay * ay) + (uint32_t)(az * az));
-    roll_base = IMU_Integer_Sqrt(
-        (uint32_t)(ax * ax) + (uint32_t)(az * az));
-
-    *pitch_cdeg = IMU_Atan2_Cdeg(ax, pitch_base);
-    *roll_cdeg = IMU_Atan2_Cdeg(ay, roll_base);
-    return 1U;
+    raw_acc[0] = (int16_t)ax;
+    raw_acc[1] = (int16_t)ay;
+    raw_acc[2] = (int16_t)az;
+    return IMU_Angle_From_Raw(raw_acc, pitch_cdeg, roll_cdeg);
 }
 
 uint8_t IMU_Get_Pitch(int16_t *pitch_cdeg)
@@ -373,6 +388,31 @@ uint8_t LSM6DS_Read_Storage(float *acc_mg, float *gyro_dps)
     return 1;
 }
 
+uint8_t LSM6DS_Read_Live(int16_t acc_mg[3], int16_t gyro_dps[3],
+                         int16_t *pitch_cdeg, int16_t *roll_cdeg)
+{
+    int16_t raw_acc[3];
+    int16_t raw_gyr[3];
+
+    if (acc_mg == NULL || gyro_dps == NULL ||
+        pitch_cdeg == NULL || roll_cdeg == NULL) return 0U;
+    if (!s_active_mode_ready) {
+        if (!LSM6DS_Set_Active_Mode()) return 0U;
+        HAL_Delay(20U);
+    }
+    if (lsm6ds3tr_c_acceleration_raw_get(&imu_ctx, raw_acc) != 0 ||
+        lsm6ds3tr_c_angular_rate_raw_get(&imu_ctx, raw_gyr) != 0 ||
+        !IMU_Angle_From_Raw(raw_acc, pitch_cdeg, roll_cdeg)) return 0U;
+
+    for (uint8_t i = 0U; i < 3U; i++) {
+        int32_t acc_scaled = (int32_t)raw_acc[i] * 61;
+        int32_t gyr_scaled = (int32_t)raw_gyr[i] * 7;
+        acc_mg[i] = (int16_t)((acc_scaled >= 0 ? acc_scaled + 500 : acc_scaled - 500) / 1000);
+        gyro_dps[i] = (int16_t)((gyr_scaled >= 0 ? gyr_scaled + 50 : gyr_scaled - 50) / 100);
+    }
+    return 1U;
+}
+
 /**
  * @brief 切换到事件采集模式：关闭INT1路由并以104 Hz开启加速度计和陀螺仪。
  * @return 1全部寄存器配置成功，0 I2C配置失败。
@@ -381,6 +421,8 @@ uint8_t LSM6DS_Read_Storage(float *acc_mg, float *gyro_dps)
 uint8_t LSM6DS_Set_Active_Mode(void)
 {
     lsm6ds3tr_c_int1_route_t int1_route = {0};
+
+    if (s_active_mode_ready) return 1U;
 
     /* 采样或模组联网期间不锁存新的 IMU 事件。 */
     if (lsm6ds3tr_c_pin_int1_route_get(&imu_ctx, &int1_route) != 0) return 0;
@@ -400,6 +442,7 @@ uint8_t LSM6DS_Set_Active_Mode(void)
         return 0;
     }
     s_sleep_mode_ready = 0U;
+    s_active_mode_ready = 1U;
     return 1;
 }
 
@@ -469,6 +512,7 @@ uint8_t LSM6DS_Set_Sleep_Mode(void)
     /* 已为 Stop1 布防期间到达的事件不能被清除。 */
     if (s_sleep_mode_ready && LSM6DS_Sleep_Config_Is_Valid()) return 1U;
     s_sleep_mode_ready = 0U;
+    s_active_mode_ready = 0U;
 
     /* WU/6D 保持已验证的 52Hz 加速度计工作点；陀螺仪与二者独立，可在主动采样前关闭。 */
     if (lsm6ds3tr_c_pin_int1_route_get(&imu_ctx, &int1_route) != 0) return 0;

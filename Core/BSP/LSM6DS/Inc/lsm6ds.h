@@ -28,6 +28,18 @@ uint8_t LSM6DS_Init(I2C_HandleTypeDef *hi2c);
 uint8_t LSM6DS_Read_Storage(float *acc_mg, float *gyro_dps);
 
 /**
+ * @brief 为上位机实时页面读取一帧六轴和姿态数据。
+ * @param acc_mg 输出X/Y/Z加速度，单位mg。
+ * @param gyro_dps 输出X/Y/Z角速度，单位dps。
+ * @param pitch_cdeg 输出Pitch，单位0.01度。
+ * @param roll_cdeg 输出Roll，单位0.01度。
+ * @return 1成功，0表示配置、I2C或数据有效性检查失败。
+ * @note 首次调用会切换到104Hz主动模式；进入Stop1前仍由LSM6DS_Set_Sleep_Mode重新布防。
+ */
+uint8_t LSM6DS_Read_Live(int16_t acc_mg[3], int16_t gyro_dps[3],
+                         int16_t *pitch_cdeg, int16_t *roll_cdeg);
+
+/**
  * @brief 读取 LSM6DS 原生传感器坐标系下的 Pitch 和 Roll。
  * @param pitch_cdeg 输出 Pitch，单位 0.01 度，范围 -9000~9000。
  * @param roll_cdeg 输出 Roll，单位 0.01 度，范围 -9000~9000。

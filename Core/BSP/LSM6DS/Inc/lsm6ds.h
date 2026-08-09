@@ -54,9 +54,18 @@ uint8_t IMU_Get_Roll(int16_t *roll_cdeg);
 /**
  * @brief 进入事件采样工作点：加速度计和陀螺仪104 Hz，并暂时屏蔽INT1路由。
  * @return 1成功，0表示I2C配置失败。
- * @note 唤醒后、开始3秒采样前调用；采样完成必须调用LSM6DS_Set_Sleep_Mode()重新布防。
+ * @note 唤醒后、开始3秒采样前调用；采样完成先进入
+ *       LSM6DS_Set_Report_Wait_Mode()，完整上报结束后才重新布防。
  */
 uint8_t LSM6DS_Set_Active_Mode(void);
+
+/**
+ * @brief 进入上报等待工作点：加速度计52 Hz、陀螺仪关闭，并保持INT1路由关闭。
+ * @return 1成功，0表示I2C配置失败。
+ * @note 用于IMU采样结束后的联网、MQTT和GNSS阶段，避免一次事件处理完成前
+ *       再次锁存WU/6D；完整上报结束后调用LSM6DS_Set_Sleep_Mode()重新布防。
+ */
+uint8_t LSM6DS_Set_Report_Wait_Mode(void);
 
 /**
  * @brief 进入低功耗监测工作点：加速度计52 Hz、陀螺仪关闭、WU+6D路由INT1。

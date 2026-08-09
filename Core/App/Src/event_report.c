@@ -359,10 +359,9 @@ uint8_t Capture_Event_And_Start_Modem(EventRecord_t *event,
   event->tilt_change_cdeg[2] = Clamp_Int16(yaw_accum_cdeg);
   if (out_dynamic_peak_mg != NULL) *out_dynamic_peak_mg = dynamic_peak_mg;
 
-  /* 采样期间 INT1 的 WU/6D 被临时屏蔽；采样结束立即重新布防，避免在网络、
-   * GNSS、MQTT 和关机期间长时间丢失新事件。新产生的 IMU 边沿由 EXTI 锁存，
-   * 后续在 Enter_Stop1_Mode() 中统一处理。 */
-  g_imu_ok = LSM6DS_Set_Sleep_Mode();
+  /* 本轮上报完成前不接受新的IMU事件。采样结束后降低IMU功耗，但继续关闭
+   * WU/6D的INT1路由；Run_Event_Report()统一清理时才重新布防。 */
+  g_imu_ok = LSM6DS_Set_Report_Wait_Mode();
 
   if (!start_modem) return 0U;
 
@@ -570,10 +569,11 @@ uint8_t Run_Event_Report(uint8_t wu_flag, uint8_t d6d_flag,
     }
     is_current_event = (uint8_t)(current_stored &&
                                  queued.event_id == event.event_id);
-    if (!ML307C_Send_EventReport(&queued, NULL, NULL,
-                                 2000 + rtc_date.Year, rtc_date.Month, rtc_date.Date,
-                                 rtc_time.Hours, rtc_time.Minutes, rtc_time.Seconds,
-                                 topic, (uint8_t)(is_current_event ? 0U : 1U))) {
+    if (!ML307C_Send_EventReport_WithoutLocation(
+            &queued,
+            2000 + rtc_date.Year, rtc_date.Month, rtc_date.Date,
+            rtc_time.Hours, rtc_time.Minutes, rtc_time.Seconds,
+            topic, (uint8_t)(is_current_event ? 0U : 1U))) {
       event.fail_reason = EVENT_FAIL_MQTT_PUBACK;
       sent = 0U;
       goto report_cleanup;

@@ -403,6 +403,34 @@ uint8_t LSM6DS_Set_Active_Mode(void)
     return 1;
 }
 
+/**
+ * @brief 切换到上报等待模式：降低采样功耗，但在本轮联网/GNSS结束前不重新布防INT1。
+ * @return 1全部寄存器配置成功，0 I2C配置失败。
+ */
+uint8_t LSM6DS_Set_Report_Wait_Mode(void)
+{
+    lsm6ds3tr_c_int1_route_t int1_route = {0};
+
+    if (lsm6ds3tr_c_pin_int1_route_get(&imu_ctx, &int1_route) != 0) return 0;
+    int1_route.int1_wu = 0;
+    int1_route.int1_6d = 0;
+    int1_route.int1_tilt = 0;
+    if (lsm6ds3tr_c_pin_int1_route_set(&imu_ctx, int1_route) != 0) return 0;
+
+    if (lsm6ds3tr_c_xl_power_mode_set(&imu_ctx,
+                                      LSM6DS3TR_C_XL_HIGH_PERFORMANCE) != 0 ||
+        lsm6ds3tr_c_xl_data_rate_set(&imu_ctx,
+                                     LSM6DS3TR_C_XL_ODR_52Hz) != 0 ||
+        lsm6ds3tr_c_gy_data_rate_set(&imu_ctx,
+                                     LSM6DS3TR_C_GY_ODR_OFF) != 0) {
+        return 0;
+    }
+
+    /* 仍未布防，确保结束上报时LSM6DS_Set_Sleep_Mode()执行完整清锁存和路由流程。 */
+    s_sleep_mode_ready = 0U;
+    return 1;
+}
+
 /* 校验完整唤醒链路而非只信任软件缓存：休眠时应为 CTRL1_XL=52Hz/2g、陀螺仪关闭、
  * TAP_CFG 的 INTERRUPTS_ENABLE 与 LIR 置位，WU 与 6D 均路由至 INT1。 */
 static uint8_t LSM6DS_Sleep_Config_Is_Valid(void)
